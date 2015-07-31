@@ -1,0 +1,15 @@
+name: BlockParticles
+version: 1.0.0
+description: Generates particles on the block the player is standing on
+author: Chiller
+main: me.chiller.blockparticles.BlockParticles
+commands:
+  blockparticles:
+    description: 'Sets the blocks particles'
+    usage: '§6Do /blockparticles <particle>'
+    aliases: bp
+    permission: 'blockparticles.use'
+    permission-message: ''
+permissions:
+  blockparticles.use:
+    description: 'Gives the ability to use BlockParticles'
