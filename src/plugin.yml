@@ -6,7 +6,7 @@ main: me.chiller.blockparticles.BlockParticles
 commands:
   blockparticles:
     description: 'Sets the blocks particles'
-    usage: '§6Do /blockparticles <particle>'
+    usage: 'Do /blockparticles [player] <particle> <lasts_for|0=infinite>'
     aliases: bp
     permission: 'blockparticles.use'
     permission-message: ''

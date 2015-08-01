@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -17,15 +18,37 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import me.chiller.blockparticles.util.NMSHelper;
 
+@SuppressWarnings("rawtypes")
 public class BlockParticles extends JavaPlugin
 {
 	private Random rand = new Random();
 	
 	private List<BlockParticleEffect> effects = new ArrayList<BlockParticleEffect>();
 	
+	private Class<?> PacketPlayOutWorldParticles;
+	private Class<?> EntityPlayer;
+	private Class<?> Packet;
+	
+	private Class<Enum> EnumParticle;
+	private Class<?> CraftPlayer;
+	
+	@SuppressWarnings("unchecked")
 	public void onEnable()
 	{
 		ConfigurationSerialization.registerClass(BlockParticleEffect.class);
+		
+		try
+		{
+			PacketPlayOutWorldParticles = NMSHelper.importClass("net.minecraft.server._version_.PacketPlayOutWorldParticles");
+			EntityPlayer = NMSHelper.importClass("net.minecraft.server._version_.EntityPlayer");
+			Packet = NMSHelper.importClass("net.minecraft.server._version_.Packet");
+			
+			EnumParticle = (Class<Enum>) NMSHelper.importClass("net.minecraft.server._version_.EnumParticle");
+			CraftPlayer = NMSHelper.importClass("org.bukkit.craftbukkit._version_.entity.CraftPlayer");
+		} catch (ClassNotFoundException e)
+		{
+			e.printStackTrace();
+		}
 		
 		loadEffects();
 		
@@ -64,7 +87,7 @@ public class BlockParticles extends JavaPlugin
 		
 		new BukkitRunnable()
 		{
-			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@SuppressWarnings("unchecked")
 			public void run()
 			{
 				if (effect.getDuration() == 0 || System.currentTimeMillis() < effect.getDuration())
@@ -75,16 +98,9 @@ public class BlockParticles extends JavaPlugin
 					
 					try
 					{
-						Class<?> PacketPlayOutWorldParticles = NMSHelper.importClass("net.minecraft.server._version_.PacketPlayOutWorldParticles");
-						Class<?> EntityPlayer = NMSHelper.importClass("net.minecraft.server._version_.EntityPlayer");
-						Class<?> Packet = NMSHelper.importClass("net.minecraft.server._version_.Packet");
-						
-						Class<Enum> EnumParticle = (Class<Enum>) NMSHelper.importClass("net.minecraft.server._version_.EnumParticle");
-						Class<?> CraftPlayer = NMSHelper.importClass("org.bukkit.craftbukkit._version_.entity.CraftPlayer");
-						
 						Object packet = NMSHelper.buildInstance(PacketPlayOutWorldParticles)
 							.addVersionInstance("1.8", new Class<?>[] { EnumParticle, boolean.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, int.class, int[].class })
-							.addArguments("1.8", Enum.valueOf(EnumParticle, "EXPLOSION_NORMAL"), true, (float) particleLoc.getX(), (float) particleLoc.getY(), (float) particleLoc.getZ(), 0, 0, 0, 0, 5, new int[] {})
+							.addArguments("1.8", Enum.valueOf(EnumParticle, effect.getName()), true, (float) particleLoc.getX(), (float) particleLoc.getY(), (float) particleLoc.getZ(), 0, 0, 0, 0, 5, new int[] {})
 							.newInstance();
 						
 						for (Player onlinePlayer : Bukkit.getOnlinePlayers())
@@ -101,7 +117,7 @@ public class BlockParticles extends JavaPlugin
 								.addUniversalMethod("sendPacket", Packet)
 								.execute(packet);
 						}
-					} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | NoSuchFieldException e)
+					} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | NoSuchFieldException e)
 					{
 						e.printStackTrace();
 					}
@@ -110,9 +126,11 @@ public class BlockParticles extends JavaPlugin
 		}.runTaskTimerAsynchronously(this, 0, 2);
 	}
 	
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation", "unchecked" })
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args)
 	{
+		//Check if enum particle exists - throws: IllegalArgumentException
+		
 		if (sender instanceof Player)
 		{
 			Player p = (Player) sender;
@@ -125,26 +143,43 @@ public class BlockParticles extends JavaPlugin
 					{
 						try
 						{
-							String particle = args[0];
+							String particle = args[0].replace(" ", "_").toUpperCase();
 							int end = Integer.parseInt(args[1]);
 							
+							Enum.valueOf(EnumParticle, particle);
+							
 							createParticles(new BlockParticleEffect(p.getLocation(), particle, end), true);
-						} catch (Exception e)
+							
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_GREEN + "Playing " + particle + " at your feet for" + (end == 0 ? "ever" : (" " + end + " seconds")));
+						} catch (NumberFormatException e)
 						{
 							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid end time entered");
+						} catch (IllegalArgumentException e)
+						{
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid particle name entered, valid names: " + ChatColor.DARK_AQUA + StringUtils.join(EnumParticle.getEnumConstants(), ChatColor.AQUA + ", " + ChatColor.DARK_AQUA).toLowerCase());
 						}
 					} else if (args.length == 3)
 					{
 						try
 						{
 							Player player = Bukkit.getPlayer(args[0]);
-							String particle = args[1];
+							String particle = args[1].replace(" ", "_").toUpperCase();
 							int end = Integer.parseInt(args[2]);
 							
+							Enum.valueOf(EnumParticle, particle);
+							
 							createParticles(new BlockParticleEffect(player.getLocation(), particle, end), true);
-						} catch (Exception e)
+							
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_GREEN + "Playing " + particle + " at " + player.getName() + "'s feet for" + (end == 0 ? "ever" : (" " + end + " seconds")));
+						} catch (NullPointerException e)
 						{
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid player or end time entered");
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "The player you entered could not be found");
+						} catch (NumberFormatException e)
+						{
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid end time entered");
+						} catch (IllegalArgumentException e)
+						{
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid particle name entered, valid names: " + ChatColor.DARK_AQUA + StringUtils.join(EnumParticle.getEnumConstants(), ChatColor.AQUA + ", " + ChatColor.DARK_AQUA).toLowerCase());
 						}
 					}
 				} else
@@ -153,7 +188,7 @@ public class BlockParticles extends JavaPlugin
 				}
 			} else
 			{
-				p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Usage: /" + label + " <particle>");
+				p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Usage: /" + label + " [player] <particle> <lasts_for|0=infinite>");
 			}
 		}
 		
