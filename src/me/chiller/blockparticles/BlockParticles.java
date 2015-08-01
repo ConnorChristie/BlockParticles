@@ -99,9 +99,8 @@ public class BlockParticles extends JavaPlugin
 					try
 					{
 						Object packet = NMSHelper.buildInstance(PacketPlayOutWorldParticles)
-							.addVersionInstance("1.8", new Class<?>[] { EnumParticle, boolean.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, int.class, int[].class })
-							.addArguments("1.8", Enum.valueOf(EnumParticle, effect.getName()), true, (float) particleLoc.getX(), (float) particleLoc.getY(), (float) particleLoc.getZ(), 0, 0, 0, 0, 5, new int[] {})
-							.newInstance();
+							.addUniversalInstance(new Class<?>[] { EnumParticle, boolean.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, int.class, int[].class })
+							.newInstance(Enum.valueOf(EnumParticle, effect.getName()), true, (float) particleLoc.getX(), (float) particleLoc.getY(), (float) particleLoc.getZ(), 0, 0, 0, 0, 5, new int[] {});
 						
 						for (Player onlinePlayer : Bukkit.getOnlinePlayers())
 						{
@@ -129,8 +128,6 @@ public class BlockParticles extends JavaPlugin
 	@SuppressWarnings({ "deprecation", "unchecked" })
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args)
 	{
-		//Check if enum particle exists - throws: IllegalArgumentException
-		
 		if (sender instanceof Player)
 		{
 			Player p = (Player) sender;
@@ -139,28 +136,9 @@ public class BlockParticles extends JavaPlugin
 			{
 				if (p.hasPermission("blockparticles.use"))
 				{
-					if (args.length == 2)
+					try
 					{
-						try
-						{
-							String particle = args[0].replace(" ", "_").toUpperCase();
-							int end = Integer.parseInt(args[1]);
-							
-							Enum.valueOf(EnumParticle, particle);
-							
-							createParticles(new BlockParticleEffect(p.getLocation(), particle, end), true);
-							
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_GREEN + "Playing " + particle + " at your feet for" + (end == 0 ? "ever" : (" " + end + " seconds")));
-						} catch (NumberFormatException e)
-						{
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid end time entered");
-						} catch (IllegalArgumentException e)
-						{
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid particle name entered, valid names: " + ChatColor.DARK_AQUA + StringUtils.join(EnumParticle.getEnumConstants(), ChatColor.AQUA + ", " + ChatColor.DARK_AQUA).toLowerCase());
-						}
-					} else if (args.length == 3)
-					{
-						try
+						if (args.length == 3)
 						{
 							Player player = Bukkit.getPlayer(args[0]);
 							String particle = args[1].replace(" ", "_").toUpperCase();
@@ -171,16 +149,29 @@ public class BlockParticles extends JavaPlugin
 							createParticles(new BlockParticleEffect(player.getLocation(), particle, end), true);
 							
 							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_GREEN + "Playing " + particle + " at " + player.getName() + "'s feet for" + (end == 0 ? "ever" : (" " + end + " seconds")));
-						} catch (NullPointerException e)
+						} else if (args.length == 2)
 						{
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "The player you entered could not be found");
-						} catch (NumberFormatException e)
+							String particle = args[0].replace(" ", "_").toUpperCase();
+							int end = Integer.parseInt(args[1]);
+							
+							Enum.valueOf(EnumParticle, particle);
+							
+							createParticles(new BlockParticleEffect(p.getLocation(), particle, end), true);
+							
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_GREEN + "Playing " + particle + " at your feet for" + (end == 0 ? "ever" : (" " + end + " seconds")));
+						} else
 						{
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid end time entered");
-						} catch (IllegalArgumentException e)
-						{
-							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid particle name entered, valid names: " + ChatColor.DARK_AQUA + StringUtils.join(EnumParticle.getEnumConstants(), ChatColor.AQUA + ", " + ChatColor.DARK_AQUA).toLowerCase());
+							p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Usage: /" + label + " [player] <particle> <lasts_for|0=infinite>");
 						}
+					} catch (NullPointerException e)
+					{
+						p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "The player you entered could not be found");
+					} catch (NumberFormatException e)
+					{
+						p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid end time entered");
+					} catch (IllegalArgumentException e)
+					{
+						p.sendMessage(ChatColor.GOLD + "[BlockParticles] " + ChatColor.DARK_RED + "Invalid particle name entered, valid names: " + ChatColor.DARK_AQUA + StringUtils.join(EnumParticle.getEnumConstants(), ChatColor.AQUA + ", " + ChatColor.DARK_AQUA).toLowerCase());
 					}
 				} else
 				{

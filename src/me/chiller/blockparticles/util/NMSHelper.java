@@ -147,9 +147,9 @@ public class NMSHelper
 		 * @param argTypes Optional, argument types for the instance
 		 * @return The current instance builder
 		 */
-		public InstanceBuilder addUniversalInstance(String method, Class<?>... argTypes)
+		public InstanceBuilder addUniversalInstance(Class<?>... argTypes)
 		{
-			versionInstances.add(new VersionMethod("*", method, argTypes));
+			versionInstances.add(new VersionMethod("*", "instance", argTypes));
 			
 			return this;
 		}
